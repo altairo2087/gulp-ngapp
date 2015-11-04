@@ -38,6 +38,7 @@
     "event-stream": "~3.3.2",
     "del": "~2.0.2",
     "browser-sync": "~2.9.11",
-    "gulp-cli": "~0.3.0"
+    "gulp-cli": "~0.3.0",
+    "gulp-add-src": "~0.2.0"
   }
 }
