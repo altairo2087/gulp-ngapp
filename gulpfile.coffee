@@ -10,6 +10,8 @@ PORT = 8000
 DIST_PATH = 'dist'
 PUBLIC_PATH = 'public'
 
+IMAGES = ['png','jpg','jpeg','gif','ico','bmp']
+
 ENV_PROD = 'prod'
 ENV_DEV = 'dev'
 ENV_CURRENT = ENV_DEV
@@ -21,15 +23,40 @@ log = (error)->
 clean = ->
   plugins.del ["#{PUBLIC_PATH}/**","!#{PUBLIC_PATH}","!#{PUBLIC_PATH}/.gitkeep"]
 
+orderedVendorJs = ->
+  gulp.src "#{PUBLIC_PATH}/vendor/*.js",
+      read: false
+    .pipe plugins.order [
+        "*jquery*",
+        "*bootstrap.*",
+        "*bootstrap*",
+        "!*angular*",
+        "*angular.*",
+        "*angular*",
+    ]
+
+orderedCustomJs = ->
+  gulp.src ["#{PUBLIC_PATH}/**/*.js","!#{PUBLIC_PATH}/vendor/**/*"],
+    read: false
+  .pipe plugins.order []
+
+orderedCss = ->
+  gulp.src "#{PUBLIC_PATH}/**/*.css",
+      read: false
+    .pipe plugins.order [
+      "*bootstrap.*",
+      "*bootstrap*",
+    ]
+
 inject = ->
   q = Q.defer()
   gulp.src "#{PUBLIC_PATH}/**/*.inject.html"
-    .pipe plugins.inject gulp.src("#{PUBLIC_PATH}/**/*.css",{read: false}),
+    .pipe plugins.inject orderedCss(),
       relative: true
-    .pipe plugins.inject gulp.src("#{PUBLIC_PATH}/vendor/*.js",{read: false}),
+    .pipe plugins.inject orderedVendorJs(),
       name: 'bower'
       relative: true
-    .pipe plugins.inject gulp.src( ["#{PUBLIC_PATH}/**/*.js","!#{PUBLIC_PATH}/vendor/**/*"],{read: false}),
+    .pipe plugins.inject orderedCustomJs(),
       relative: true
     .pipe plugins.rename (path)->
       path.basename = path.basename.replace '.inject', ''
@@ -59,6 +86,12 @@ html = ->
   gulp.src "#{DIST_PATH}/**/*.html"
     .pipe plugins.prettify
       indent_size: 2
+    .pipe gulp.dest PUBLIC_PATH
+
+images = ->
+  images = for ext in IMAGES
+    "#{DIST_PATH}/**/*.#{ext}"
+  gulp.src images
     .pipe gulp.dest PUBLIC_PATH
 
 sass = ->
