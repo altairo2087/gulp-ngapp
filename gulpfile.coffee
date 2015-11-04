@@ -27,7 +27,6 @@ ORDER_VENDOR_JS = [
 ENV_PROD = 'prod'
 ENV_DEV = 'dev'
 
-
 if plugins.util.env.env
   if not plugins.util.env.env in [ENV_PROD,ENV_DEV]
     throw new Error 'unknown env'
@@ -52,29 +51,10 @@ orderedCustomJs = ->
     read: false
   .pipe plugins.order []
 
-orderedCss = ->
+orderedVendorCss = ->
   gulp.src "#{PUBLIC_PATH}/**/*.css",
       read: false
     .pipe plugins.order ORDER_VENDOR_CSS
-
-inject = ->
-  q = Q.defer()
-  gulp.src "#{PUBLIC_PATH}/**/*.inject.html"
-    .pipe plugins.inject orderedCss(),
-      relative: true
-    .pipe plugins.inject orderedVendorJs(),
-      name: 'bower'
-      relative: true
-    .pipe plugins.inject orderedCustomJs(),
-      relative: true
-    .pipe plugins.rename (path)->
-      path.basename = path.basename.replace '.inject', ''
-    .pipe gulp.dest PUBLIC_PATH
-    .on 'end', ->
-      plugins.del "#{PUBLIC_PATH}/**/*.inject.html"
-        .then ->
-          q.resolve()
-  q.promise
 
 server = ->
   gulp.src PUBLIC_PATH
@@ -126,6 +106,33 @@ js = ->
   gulp.src "#{DIST_PATH}/**/*.js"
     .pipe gulp.dest PUBLIC_PATH
 
+inject = ->
+  q = Q.defer()
+  gulp.src "#{PUBLIC_PATH}/**/*.inject.html"
+  .pipe plugins.inject orderedVendorCss(),
+    name: 'bower'
+    relative: true
+  .pipe plugins.inject orderedVendorJs(),
+    name: 'bower'
+    relative: true
+  .pipe plugins.inject orderedCustomJs(),
+    relative: true
+  .pipe plugins.rename (path)->
+    path.basename = path.basename.replace '.inject', ''
+  .pipe gulp.dest PUBLIC_PATH
+  .on 'end', ->
+    plugins.del "#{PUBLIC_PATH}/**/*.inject.html"
+    .then ->
+      if ENV_CURRENT is ENV_PROD
+        gulp.src "#{PUBLIC_PATH}/**/*.html"
+          .pipe plugins.angularHtmlify()
+          .pipe plugins.htmlmin
+            collapseWhitespace: true
+            removeComments: true
+          .pipe gulp.dest PUBLIC_PATH
+      q.resolve()
+  q.promise
+
 bower = ->
   q = Q.defer()
   cssFilter = filter '**/*.css'
@@ -170,9 +177,9 @@ bower = ->
 
 build = ->
   clean().then ->
-    jade()
-    bower().then ->
-      inject()
+    Q.all(jade()).then ->
+      bower().then ->
+        inject()
 
 tasks =
   clean:
@@ -182,7 +189,7 @@ tasks =
     desc: "start local server on port #{PORT}"
     action: server
   build:
-    desc: ""
+    desc: "build app: '--env [prod|dev]' default 'dev'"
     action: build
   default:
     action: ->
