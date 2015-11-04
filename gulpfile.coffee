@@ -1,9 +1,9 @@
 'use strict'
 gulp = require 'gulp'
-plugins = require('gulp-load-plugins')()
-del = require 'del'
-bowerFiles = require 'main-bower-files'
-browserSync = require 'browser-sync'
+Q = require 'q'
+plugins = (require 'gulp-load-plugins')
+  pattern: ['gulp-*', 'gulp.*', 'del', 'main-bower-files']
+  replaceString: /\bgulp[\-.]/
 
 PORT = 8000
 
@@ -19,7 +19,26 @@ log = (error)->
   @end()
 
 clean = ->
-  del ["#{PUBLIC_PATH}/**","!#{PUBLIC_PATH}"]
+  plugins.del ["#{PUBLIC_PATH}/**","!#{PUBLIC_PATH}","!#{PUBLIC_PATH}/.gitkeep"]
+
+inject = ->
+  q = Q.defer()
+  gulp.src "#{PUBLIC_PATH}/**/*.inject.html"
+    .pipe plugins.inject gulp.src("#{PUBLIC_PATH}/**/*.css",{read: false}),
+      relative: true
+    .pipe plugins.inject gulp.src("#{PUBLIC_PATH}/vendor/*.js",{read: false}),
+      name: 'bower'
+      relative: true
+    .pipe plugins.inject gulp.src( ["#{PUBLIC_PATH}/**/*.js","!#{PUBLIC_PATH}/vendor/**/*"],{read: false}),
+      relative: true
+    .pipe plugins.rename (path)->
+      path.basename = path.basename.replace '.inject', ''
+    .pipe gulp.dest PUBLIC_PATH
+    .on 'end', ->
+      plugins.del "#{PUBLIC_PATH}/**/*.inject.html"
+        .then ->
+          q.resolve()
+  q.promise
 
 server = ->
   gulp.src PUBLIC_PATH
@@ -49,7 +68,12 @@ sass = ->
 
 css = ->
   gulp.src "#{DIST_PATH}/**/*.css"
+    .pipe plugins.autoprefixer()
     .pipe gulp.dest PUBLIC_PATH
+
+filter = (types)->
+  plugins.filter types,
+    restore: true
 
 coffee = ->
   gulp.src "#{DIST_PATH}/**/*.coffee"
@@ -60,6 +84,32 @@ js = ->
   gulp.src "#{DIST_PATH}/**/*.js"
     .pipe gulp.dest PUBLIC_PATH
 
+bower = ->
+  q = Q.defer()
+  cssFilter = filter '**/*.css'
+  if ENV_CURRENT is ENV_PROD then postfix = '.min' else postfix = ''
+  gulp.src plugins.mainBowerFiles
+    overrides:
+      bootstrap:
+        main: [
+          "./dist/js/bootstrap#{postfix}.js",
+          "./dist/css/bootstrap#{postfix}.css",
+          "./dist/fonts/*"
+        ]
+  .pipe cssFilter
+  .pipe plugins.cssUrlAdjuster
+    replace:  ['../fonts','./']
+  .pipe cssFilter.restore
+  .pipe gulp.dest "#{PUBLIC_PATH}/vendor"
+  .on 'end', ->
+    q.resolve()
+  q.promise
+
+build = ->
+  clean().then ->
+    jade()
+    bower().then ->
+      inject()
 
 tasks =
   clean:
@@ -70,8 +120,7 @@ tasks =
     action: server
   build:
     desc: ""
-  test:
-    action: coffee
+    action: build
   default:
     action: ->
       for task, opts of tasks
