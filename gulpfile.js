@@ -51,6 +51,17 @@
     },
     watch: {
       desc: ""
+    },
+    "default": {
+      action: function() {
+        var opts, results, task;
+        results = [];
+        for (task in tasks) {
+          opts = tasks[task];
+          results.push(console.log(task + " - " + opts.desc));
+        }
+        return results;
+      }
     }
   };
 
@@ -58,16 +69,6 @@
     opts = tasks[task];
     gulp.task(task, opts.action);
   }
-
-  gulp.task('default', function() {
-    var results;
-    results = [];
-    for (task in tasks) {
-      opts = tasks[task];
-      results.push(console.log(task + " - " + opts.desc));
-    }
-    return results;
-  });
 
 }).call(this);
 

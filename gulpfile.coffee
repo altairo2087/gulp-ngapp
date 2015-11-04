@@ -35,10 +35,10 @@ tasks =
     desc: ""
   watch:
     desc: ""
+  default:
+    action: ->
+      for task, opts of tasks
+        console.log "#{task} - #{opts.desc}"
 
 for task, opts of tasks
   gulp.task task, opts.action
-
-gulp.task 'default', ->
-  for task, opts of tasks
-    console.log "#{task} - #{opts.desc}"
