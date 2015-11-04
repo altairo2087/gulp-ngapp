@@ -43,6 +43,7 @@
     "q": "~1.4.1",
     "gulp-print": "~2.0.1",
     "gulp-util": "~3.0.7",
-    "gulp-angular-htmlify": "~2.3.0"
+    "gulp-angular-htmlify": "~2.3.0",
+    "gulp-watch": "~4.3.5"
   }
 }

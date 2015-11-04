@@ -34,17 +34,13 @@ if plugins.util.env.env
 else
   ENV_CURRENT = ENV_DEV
 
-log = (error)->
-  console.log "#{new Date.toString}:Error #{error.name} in #{error.plugin}\n #{error.message}\n"
-  @end()
-
 clean = ->
   plugins.del ["#{PUBLIC_PATH}/**","!#{PUBLIC_PATH}","!#{PUBLIC_PATH}/.gitkeep"]
 
 orderedVendorJs = ->
   gulp.src "#{PUBLIC_PATH}/vendor/*.js",
-      read: false
-    .pipe plugins.order ORDER_VENDOR_JS
+    read: false
+  .pipe plugins.order ORDER_VENDOR_JS
 
 orderedCustomJs = ->
   gulp.src ["#{PUBLIC_PATH}/**/*.js","!#{PUBLIC_PATH}/vendor/**/*"],
@@ -52,20 +48,25 @@ orderedCustomJs = ->
   .pipe plugins.order []
 
 orderedVendorCss = ->
-  gulp.src "#{PUBLIC_PATH}/**/*.css",
-      read: false
-    .pipe plugins.order ORDER_VENDOR_CSS
+  gulp.src "#{PUBLIC_PATH}/vendor/*.css",
+    read: false
+  .pipe plugins.order ORDER_VENDOR_CSS
 
-server = ->
-  gulp.src PUBLIC_PATH
-    .pipe plugins.webserver
-      livereload: true,
-      #directoryListing: true
-      open: true
-      port: PORT
+orderedCustomCss = ->
+  gulp.src ["#{PUBLIC_PATH}/**/*.css","!#{PUBLIC_PATH}/vendor/**/*"],
+    read: false
+  .pipe plugins.order []
 
 jade = ->
   gulp.src "#{DIST_PATH}/**/*.jade"
+    .pipe plugins.jade()
+    .pipe plugins.prettify
+      indent_size: 2
+    .pipe gulp.dest PUBLIC_PATH
+
+jadeWatch = ->
+  gulp.src ["#{DIST_PATH}/**/*.jade","!#{DIST_PATH}/**/*.inject.jade"]
+    .pipe plugins.watch ["#{DIST_PATH}/**/*.jade","!#{DIST_PATH}/**/*.inject.jade"]
     .pipe plugins.jade()
     .pipe plugins.prettify
       indent_size: 2
@@ -111,6 +112,8 @@ inject = ->
   gulp.src "#{PUBLIC_PATH}/**/*.inject.html"
   .pipe plugins.inject orderedVendorCss(),
     name: 'bower'
+    relative: true
+  .pipe plugins.inject orderedCustomCss(),
     relative: true
   .pipe plugins.inject orderedVendorJs(),
     name: 'bower'
@@ -175,11 +178,28 @@ bower = ->
 
   q.promise
 
+watch = ->
+  jadeWatch()
+
 build = ->
   clean().then ->
-    Q.all(jade()).then ->
-      bower().then ->
-        inject()
+    Q.all([
+      jade(),
+      html(),
+      images(),
+      sass(),
+      css(),
+      bower()
+    ]).then ->
+      inject()
+
+server = ->
+  gulp.src PUBLIC_PATH
+    .pipe plugins.webserver
+      livereload: true,
+      open: true
+      port: PORT
+    .on 'end', watch
 
 tasks =
   clean:
