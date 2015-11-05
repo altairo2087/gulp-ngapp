@@ -1,20 +1,36 @@
 'use strict'
+# подключение плагинов
 gulp = require 'gulp'
 Q = require 'q'
 plugins = (require 'gulp-load-plugins')
   pattern: ['gulp-*', 'gulp.*', 'del', 'main-bower-files']
   replaceString: /\bgulp[\-.]/
+browserSync = require('browser-sync').create()
 
-PORT = 8000
+# --- НАСТРОЙКИ СЕРВЕРА
+# порт сервера
+PORT = 3000
+# автоматически открывать браузер при запуске сервера
+OPEN_BROWSER = false
+# при запуске сервера запускать наблюдатение изменений файлов сервера ?
+SERVER_WATCH = true
 
+# --- НАСТРОЙКИ ОСНОВНЫХ ПУТЕЙ ПРОЕКТА
+# папка рабочих файлов проекта
 DIST_PATH = 'dist'
+# папка сервера
 PUBLIC_PATH = 'public'
 
-IMAGES = ['png','jpg','jpeg','gif','ico','bmp']
+# возможные расширения изображений
+IMAGES = ['png','jpg','jpeg','gif','ico','bmp','webp']
+
+# --- СОРТИРОВКИ
+# порядок сортировки bower CSS файлов
 ORDER_VENDOR_CSS = [
   "*bootstrap.*",
   "*bootstrap*",
 ]
+# порядок сортировки bower js файлов
 ORDER_VENDOR_JS = [
   "*jquery*",
   "*bootstrap.*",
@@ -24,18 +40,31 @@ ORDER_VENDOR_JS = [
   "*angular*",
 ]
 
-ENV_PROD = 'prod'
-ENV_DEV = 'dev'
+# --- ОКРУЖЕНИЯ
+ENV = [
+  # продакшн (полная минификация ресурсов)
+  PROD: 'prod'
+  # разработка
+  DEV: 'dev'
+]
 
+# текущее окружение
+ENV_CURRENT = ENV.DEV
+
+# --- КОНСОЛЬНЫЕ АРГУМЕНТЫ
+# консольный аргумент окружения
 if plugins.util.env.env
-  if not plugins.util.env.env in [ENV_PROD,ENV_DEV]
+  if not plugins.util.env.env in ENV
     throw new Error 'unknown env'
   ENV_CURRENT = plugins.util.env.env
-else
-  ENV_CURRENT = ENV_DEV
 
+if plugins.util.env.watch isnt undefined
+  SERVER_WATCH = plugins.util.env.watch
+
+# полная очистка папки сервера
 clean = ->
   plugins.del ["#{PUBLIC_PATH}/**","!#{PUBLIC_PATH}","!#{PUBLIC_PATH}/.gitkeep"]
+
 
 orderedVendorJs = ->
   gulp.src "#{PUBLIC_PATH}/vendor/*.js",
@@ -126,7 +155,7 @@ inject = ->
   .on 'end', ->
     plugins.del "#{PUBLIC_PATH}/**/*.inject.html"
     .then ->
-      if ENV_CURRENT is ENV_PROD
+      if ENV_CURRENT is ENV.PROD
         gulp.src "#{PUBLIC_PATH}/**/*.html"
           .pipe plugins.angularHtmlify()
           .pipe plugins.htmlmin
@@ -150,7 +179,7 @@ bower = ->
           "./dist/fonts/*"
         ]
 
-  if ENV_CURRENT is ENV_PROD
+  if ENV_CURRENT is ENV.PROD
     src = src.pipe cssFilter
       .pipe plugins.cssUrlAdjuster
         replace:  ['../fonts','./']
@@ -164,7 +193,7 @@ bower = ->
         replace:  ['../fonts','./']
       .pipe cssFilter.restore
 
-  if ENV_CURRENT is ENV_PROD
+  if ENV_CURRENT is ENV.PROD
     src = src.pipe jsFilter
       .pipe plugins.order ORDER_VENDOR_JS
       .pipe plugins.concat 'vendor.js'
@@ -179,7 +208,7 @@ bower = ->
   q.promise
 
 watch = ->
-  jadeWatch()
+  #jadeWatch()
 
 build = ->
   clean().then ->
@@ -193,13 +222,18 @@ build = ->
     ]).then ->
       inject()
 
+# запуск сервера
 server = ->
-  gulp.src PUBLIC_PATH
-    .pipe plugins.webserver
-      livereload: true,
-      open: true
-      port: PORT
-    .on 'end', watch
+  browserSync.init
+    server:
+      baseDir: PUBLIC_PATH
+    files: SERVER_WATCH and '**/*'
+    port: PORT
+    open: OPEN_BROWSER
+    reloadOnRestart: true
+  #if SERVER_WATCH
+    #gulp.watch "#{PUBLIC_PATH}/**/*"
+      #.on "change", browserSync.reload
 
 tasks =
   clean:
@@ -212,9 +246,15 @@ tasks =
     desc: "build app: '--env [prod|dev]' default 'dev'"
     action: build
   default:
+    desc: "show tasks list"
     action: ->
+      console.log "----- available tasks -----"
       for task, opts of tasks
-        console.log "#{task} - #{opts.desc}"
+        num = 10 - task.length
+        num = 0 if num < 0
+        prefix = while num -= 1
+          " "
+        console.log "#{prefix.join('')}#{task}: #{opts.desc}"
 
 for task, opts of tasks
   gulp.task task, opts.action
