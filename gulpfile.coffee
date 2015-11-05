@@ -59,7 +59,7 @@ if plugins.util.env.env
   ENV_CURRENT = plugins.util.env.env
 
 if plugins.util.env.watch isnt undefined
-  SERVER_WATCH = plugins.util.env.watch
+  SERVER_WATCH = plugins.util.env.watch isnt "false"
 
 # полная очистка папки сервера
 clean = ->
@@ -136,6 +136,10 @@ js = ->
   gulp.src "#{DIST_PATH}/**/*.js"
     .pipe gulp.dest PUBLIC_PATH
 
+watch = ->
+#jadeWatch()
+
+# вставка css и js в html файлы папки сервера
 inject = ->
   q = Q.defer()
   gulp.src "#{PUBLIC_PATH}/**/*.inject.html"
@@ -165,11 +169,13 @@ inject = ->
       q.resolve()
   q.promise
 
+# постройка bower файлов проекта в папку сервера
 bower = ->
   q = Q.defer()
   cssFilter = filter '**/*.css'
   jsFilter = filter '**/*.js'
 
+  # список всех bower файлов
   src = gulp.src plugins.mainBowerFiles
     overrides:
       bootstrap:
@@ -179,6 +185,7 @@ bower = ->
           "./dist/fonts/*"
         ]
 
+  # обработка CSS
   if ENV_CURRENT is ENV.PROD
     src = src.pipe cssFilter
       .pipe plugins.cssUrlAdjuster
@@ -193,6 +200,7 @@ bower = ->
         replace:  ['../fonts','./']
       .pipe cssFilter.restore
 
+  # обработка JS
   if ENV_CURRENT is ENV.PROD
     src = src.pipe jsFilter
       .pipe plugins.order ORDER_VENDOR_JS
@@ -207,9 +215,7 @@ bower = ->
 
   q.promise
 
-watch = ->
-  #jadeWatch()
-
+# постройка проекта в папку сервера
 build = ->
   clean().then ->
     Q.all([
@@ -227,14 +233,13 @@ server = ->
   browserSync.init
     server:
       baseDir: PUBLIC_PATH
-    files: SERVER_WATCH and '**/*'
+    files: if SERVER_WATCH then "#{PUBLIC_PATH}/**/*" else false
     port: PORT
     open: OPEN_BROWSER
+    browser: "google chrome"
     reloadOnRestart: true
-  #if SERVER_WATCH
-    #gulp.watch "#{PUBLIC_PATH}/**/*"
-      #.on "change", browserSync.reload
 
+# список тасков gulp
 tasks =
   clean:
     desc: "clean #{PUBLIC_PATH} folder"

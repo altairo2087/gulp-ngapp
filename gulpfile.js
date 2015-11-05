@@ -48,7 +48,7 @@
   }
 
   if (plugins.util.env.watch !== void 0) {
-    SERVER_WATCH = plugins.util.env.watch;
+    SERVER_WATCH = plugins.util.env.watch !== "false";
   }
 
   clean = function() {
@@ -133,6 +133,8 @@
     return gulp.src(DIST_PATH + "/**/*.js").pipe(gulp.dest(PUBLIC_PATH));
   };
 
+  watch = function() {};
+
   inject = function() {
     var q;
     q = Q.defer();
@@ -194,8 +196,6 @@
     return q.promise;
   };
 
-  watch = function() {};
-
   build = function() {
     return clean().then(function() {
       return Q.all([jade(), html(), images(), sass(), css(), bower()]).then(function() {
@@ -209,9 +209,10 @@
       server: {
         baseDir: PUBLIC_PATH
       },
-      files: SERVER_WATCH && '**/*',
+      files: SERVER_WATCH ? PUBLIC_PATH + "/**/*" : false,
       port: PORT,
       open: OPEN_BROWSER,
+      browser: "google chrome",
       reloadOnRestart: true
     });
   };
