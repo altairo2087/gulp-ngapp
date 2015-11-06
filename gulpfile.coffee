@@ -22,7 +22,7 @@ DIST_PATH = 'dist'
 PUBLIC_PATH = 'public'
 
 # возможные расширения изображений
-IMAGES = ['png','jpg','jpeg','gif','ico','bmp','webp']
+IMAGES = ['png', 'jpg', 'jpeg', 'gif', 'ico', 'bmp', 'webp']
 
 # --- СОРТИРОВКИ
 # порядок сортировки bower CSS файлов
@@ -42,9 +42,9 @@ ORDER_VENDOR_JS = [
 
 # --- ОКРУЖЕНИЯ
 ENV = [
-  # продакшн (полная минификация ресурсов)
+# продакшн (полная минификация ресурсов)
   PROD: 'prod'
-  # разработка
+# разработка
   DEV: 'dev'
 ]
 
@@ -63,76 +63,84 @@ if plugins.util.env.watch isnt undefined
 
 # полная очистка папки сервера
 clean = ->
-  plugins.del ["#{PUBLIC_PATH}/**","!#{PUBLIC_PATH}","!#{PUBLIC_PATH}/.gitkeep"]
+  plugins.del ["#{PUBLIC_PATH}/**", "!#{PUBLIC_PATH}", "!#{PUBLIC_PATH}/.gitkeep"]
 
 filter = (types)->
   plugins.filter types,
     restore: true
 
-orderedVendorJs = ->
-  gulp.src "#{PUBLIC_PATH}/vendor/*.js",
-    read: false
-  .pipe plugins.order ORDER_VENDOR_JS
+#
+Inject =
+  orderedVendorJs: ->
+    gulp.src "#{PUBLIC_PATH}/vendor/*.js",
+      read: false
+    .pipe plugins.order ORDER_VENDOR_JS
+  orderedCustomJs: ->
+    gulp.src ["#{PUBLIC_PATH}/**/*.js", "!#{PUBLIC_PATH}/vendor/**/*"],
+      read: false
+    .pipe plugins.order []
+  orderedVendorCss: ->
+    gulp.src "#{PUBLIC_PATH}/vendor/*.css",
+      read: false
+    .pipe plugins.order ORDER_VENDOR_CSS
+  orderedCustomCss: ->
+    gulp.src ["#{PUBLIC_PATH}/**/*.css", "!#{PUBLIC_PATH}/vendor/**/*"],
+      read: false
+    .pipe plugins.order []
+  # вставка css и js в html файлы папки сервера
+  src: (src)->
+    console.log 'html injecting...'
+    filterInject = filter "**/*.inject.html"
+    src.pipe filterInject
+    .pipe plugins.inject @orderedVendorCss(),
+      name: 'bower'
+      relative: true
+    .pipe plugins.inject @orderedCustomCss(),
+      relative: true
+    .pipe plugins.inject @orderedVendorJs(),
+      name: 'bower'
+      relative: true
+    .pipe plugins.inject @orderedCustomJs(),
+      relative: true
+    .pipe plugins.rename (path)->
+      path.basename = path.basename.replace '.inject', ''
+    .pipe filterInject.restore
 
-orderedCustomJs = ->
-  gulp.src ["#{PUBLIC_PATH}/**/*.js","!#{PUBLIC_PATH}/vendor/**/*"],
-    read: false
-  .pipe plugins.order []
-
-orderedVendorCss = ->
-  gulp.src "#{PUBLIC_PATH}/vendor/*.css",
-    read: false
-  .pipe plugins.order ORDER_VENDOR_CSS
-
-orderedCustomCss = ->
-  gulp.src ["#{PUBLIC_PATH}/**/*.css","!#{PUBLIC_PATH}/vendor/**/*"],
-    read: false
-  .pipe plugins.order []
-
-# вставка css и js в html файлы папки сервера
-inject = (src)->
-  filterInject = filter "**/*.inject.html"
-  src.pipe filterInject
-  .pipe plugins.inject orderedVendorCss(),
-    name: 'bower'
-    relative: true
-  .pipe plugins.inject orderedCustomCss(),
-    relative: true
-  .pipe plugins.inject orderedVendorJs(),
-    name: 'bower'
-    relative: true
-  .pipe plugins.inject orderedCustomJs(),
-    relative: true
-  .pipe plugins.rename (path)->
-    path.basename = path.basename.replace '.inject', ''
-  .pipe filterInject.restore
-
-jade = ->
-  src = gulp.src "#{DIST_PATH}/**/*.jade"
-    .pipe plugins.jade()
-    .pipe plugins.prettify
-      indent_size: 2
-    .pipe plugins.angularHtmlify()
-
-  src = inject(src)
-
-  src.pipe gulp.dest PUBLIC_PATH
+Html =
+  compile: ->
+    console.log 'compile html...'
+    @src gulp.src ["#{DIST_PATH}/**/*.jade", "#{DIST_PATH}/**/*.html"]
+  src: (src)->
+    filterJade = filter "**/*.jade"
+    src = src.pipe filterJade
+      .pipe plugins.jade()
+      .pipe filterJade.restore
+      .pipe plugins.angularHtmlify()
+    src = Inject.src(src)
+    if ENV_CURRENT is ENV.PROD
+      src = src.pipe plugins.htmlmin
+        collapseWhitespace: true
+        removeComments: true
+    else
+      src = src.pipe plugins.prettify
+        indent_size: 2
+    src.pipe gulp.dest PUBLIC_PATH
 
 jadeWatch = ->
-  gulp.src ["#{DIST_PATH}/**/*.jade","!#{DIST_PATH}/**/*.inject.jade"]
-    .pipe plugins.watch ["#{DIST_PATH}/**/*.jade","!#{DIST_PATH}/**/*.inject.jade"]
-    .pipe plugins.jade()
-    .pipe plugins.prettify
-      indent_size: 2
-    .pipe gulp.dest PUBLIC_PATH
+  gulp.src ["#{DIST_PATH}/**/*.jade", "!#{DIST_PATH}/**/*.inject.jade"]
+  .pipe plugins.watch ["#{DIST_PATH}/**/*.jade", "!#{DIST_PATH}/**/*.inject.jade"]
+  .pipe plugins.jade()
+  .pipe plugins.prettify
+    indent_size: 2
+  .pipe gulp.dest PUBLIC_PATH
 
 html = ->
   src = gulp.src "#{DIST_PATH}/**/*.html"
-    .pipe plugins.prettify
-      indent_size: 2
-    .pipe plugins.angularHtmlify()
+  .pipe plugins.prettify
+    indent_size: 2
+  .pipe plugins.angularHtmlify()
 
-  src = inject(src)
+  src = Inject.src src
 
   src.pipe gulp.dest PUBLIC_PATH
 
@@ -140,26 +148,26 @@ images = ->
   images = for ext in IMAGES
     "#{DIST_PATH}/**/*.#{ext}"
   gulp.src images
-    .pipe gulp.dest PUBLIC_PATH
+  .pipe gulp.dest PUBLIC_PATH
 
 sass = ->
-  gulp.src ["#{DIST_PATH}/**/*.sass","#{DIST_PATH}/**/*.scss"]
-    .pipe plugins.sass()
-    .pipe gulp.dest PUBLIC_PATH
+  gulp.src ["#{DIST_PATH}/**/*.sass", "#{DIST_PATH}/**/*.scss"]
+  .pipe plugins.sass()
+  .pipe gulp.dest PUBLIC_PATH
 
 css = ->
   gulp.src "#{DIST_PATH}/**/*.css"
-    .pipe plugins.autoprefixer()
-    .pipe gulp.dest PUBLIC_PATH
+  .pipe plugins.autoprefixer()
+  .pipe gulp.dest PUBLIC_PATH
 
 coffee = ->
   gulp.src "#{DIST_PATH}/**/*.coffee"
-    .pipe plugins.coffee()
-    .pipe gulp.dest PUBLIC_PATH
+  .pipe plugins.coffee()
+  .pipe gulp.dest PUBLIC_PATH
 
 js = ->
   gulp.src "#{DIST_PATH}/**/*.js"
-    .pipe gulp.dest PUBLIC_PATH
+  .pipe gulp.dest PUBLIC_PATH
 
 watch = ->
 #jadeWatch()
@@ -183,30 +191,30 @@ bower = ->
   # обработка CSS
   if ENV_CURRENT is ENV.PROD
     src = src.pipe cssFilter
-      .pipe plugins.cssUrlAdjuster
-        replace:  ['../fonts','./']
-      .pipe plugins.order ORDER_VENDOR_CSS
-      .pipe plugins.concat 'vendor.css'
-      .pipe plugins.csso()
-      .pipe cssFilter.restore
+    .pipe plugins.cssUrlAdjuster
+      replace: ['../fonts', './']
+    .pipe plugins.order ORDER_VENDOR_CSS
+    .pipe plugins.concat 'vendor.css'
+    .pipe plugins.csso()
+    .pipe cssFilter.restore
   else
     src = src.pipe cssFilter
-      .pipe plugins.cssUrlAdjuster
-        replace:  ['../fonts','./']
-      .pipe cssFilter.restore
+    .pipe plugins.cssUrlAdjuster
+      replace: ['../fonts', './']
+    .pipe cssFilter.restore
 
   # обработка JS
   if ENV_CURRENT is ENV.PROD
     src = src.pipe jsFilter
-      .pipe plugins.order ORDER_VENDOR_JS
-      .pipe plugins.concat 'vendor.js'
-      .pipe plugins.uglify
-        mangle: true
-      .pipe jsFilter.restore
+    .pipe plugins.order ORDER_VENDOR_JS
+    .pipe plugins.concat 'vendor.js'
+    .pipe plugins.uglify
+      mangle: true
+    .pipe jsFilter.restore
 
   src.pipe gulp.dest "#{PUBLIC_PATH}/vendor"
-    .on 'end', ->
-      q.resolve()
+  .on 'end', ->
+    q.resolve()
 
   q.promise
 
@@ -221,9 +229,7 @@ build = ->
       js(),
       images()
     ]).then ->
-      jade()
-      html()
-
+      Html.compile()
 
 
 # запуск сервера
