@@ -107,9 +107,13 @@ Inject =
     .pipe filterInject.restore
 
 Html =
+  files: ["#{DIST_PATH}/**/*.jade", "#{DIST_PATH}/**/*.html"]
+  watch: ->
+    console.log 'watching html,jade...'
+    @src plugins.watch @files
   compile: ->
-    console.log 'compile html...'
-    @src gulp.src ["#{DIST_PATH}/**/*.jade", "#{DIST_PATH}/**/*.html"]
+    console.log 'compile html,jade...'
+    @src gulp.src @files
   src: (src)->
     filterJade = filter "**/*.jade"
     src = src.pipe filterJade
@@ -125,24 +129,6 @@ Html =
       src = src.pipe plugins.prettify
         indent_size: 2
     src.pipe gulp.dest PUBLIC_PATH
-
-jadeWatch = ->
-  gulp.src ["#{DIST_PATH}/**/*.jade", "!#{DIST_PATH}/**/*.inject.jade"]
-  .pipe plugins.watch ["#{DIST_PATH}/**/*.jade", "!#{DIST_PATH}/**/*.inject.jade"]
-  .pipe plugins.jade()
-  .pipe plugins.prettify
-    indent_size: 2
-  .pipe gulp.dest PUBLIC_PATH
-
-html = ->
-  src = gulp.src "#{DIST_PATH}/**/*.html"
-  .pipe plugins.prettify
-    indent_size: 2
-  .pipe plugins.angularHtmlify()
-
-  src = Inject.src src
-
-  src.pipe gulp.dest PUBLIC_PATH
 
 images = ->
   images = for ext in IMAGES
@@ -168,9 +154,6 @@ coffee = ->
 js = ->
   gulp.src "#{DIST_PATH}/**/*.js"
   .pipe gulp.dest PUBLIC_PATH
-
-watch = ->
-#jadeWatch()
 
 # постройка bower файлов проекта в папку сервера
 bower = ->
@@ -242,6 +225,7 @@ server = ->
     open: OPEN_BROWSER
     browser: "google chrome"
     reloadOnRestart: true
+  Html.watch()
 
 # список тасков gulp
 tasks =
