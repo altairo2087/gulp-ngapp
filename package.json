@@ -4,8 +4,14 @@
   "description": "",
   "main": "server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node server.js"
+    "clean":"gulp clean",
+    "server":"gulp server",
+    "server:watch":"gulp server --watch true",
+    "server:nowatch":"gulp server --watch false",
+    "build":"gulp build",
+    "build:dev":"gulp build --env dev",
+    "build:prod":"gulp build --env prod",
+    "list":"gulp default"
   },
   "repository": {
     "type": "git",
