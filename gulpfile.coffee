@@ -148,7 +148,8 @@ Css =
       .pipe filterSass.restore
     src = src.pipe plugins.autoprefixer()
     if ENV_CURRENT is ENV.PROD
-      src = src.pipe plugins.csso()
+      src = src.pipe plugins.concat 'custom.css'
+        .pipe plugins.csso()
     src.pipe gulp.dest PUBLIC_PATH
 
 
@@ -158,14 +159,24 @@ images = ->
   gulp.src images
     .pipe gulp.dest PUBLIC_PATH
 
-coffee = ->
-  gulp.src "#{DIST_PATH}/**/*.coffee"
-    .pipe plugins.coffee()
-    .pipe gulp.dest PUBLIC_PATH
-
-js = ->
-  gulp.src "#{DIST_PATH}/**/*.js"
-    .pipe gulp.dest PUBLIC_PATH
+Js =
+  files: ["#{DIST_PATH}/**/*.coffee", "#{DIST_PATH}/**/*.js"]
+  watch: ->
+    console.log 'watching js,coffee...'
+    @src plugins.watch @files
+  compile: ->
+    console.log 'compile js,coffee...'
+    @src gulp.src @files
+  src: (src)->
+    filterCoffee = filter "**/*.coffee"
+    src = src.pipe filterCoffee
+      .pipe plugins.coffee()
+      .pipe filterCoffee.restore
+    if ENV_CURRENT is ENV.PROD
+      src = src.pipe plugins.concat 'custom.js'
+        .pipe plugins.uglify
+          mangle: true
+    src.pipe gulp.dest PUBLIC_PATH
 
 # постройка bower файлов проекта в папку сервера
 bower = ->
@@ -219,8 +230,7 @@ build = ->
     Q.all([
       bower(),
       Css.compile(),
-      coffee(),
-      js(),
+      Js.compile(),
       images()
     ]).then ->
       Html.compile()
@@ -238,6 +248,7 @@ server = ->
     reloadOnRestart: true
   Html.watch()
   Css.watch()
+  Js.watch()
 
 # список тасков gulp
 tasks =
