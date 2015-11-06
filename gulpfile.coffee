@@ -3,7 +3,7 @@
 gulp = require 'gulp'
 Q = require 'q'
 plugins = (require 'gulp-load-plugins')
-  pattern: ['gulp-*', 'gulp.*', 'del', 'main-bower-files','autoprefixer']
+  pattern: ['gulp-*', 'gulp.*', 'del', 'main-bower-files','imagemin-pngquant']
   replaceString: /\bgulp[\-.]/
 browserSync = require('browser-sync').create()
 
@@ -24,7 +24,7 @@ DIST_PATH = 'dist'
 PUBLIC_PATH = 'public'
 
 # возможные расширения изображений
-IMAGES = ['png', 'jpg', 'jpeg', 'gif', 'ico', 'bmp', 'webp']
+IMAGES = ['png', 'jpg', 'jpeg', 'gif', 'svg']
 
 # --- СОРТИРОВКИ
 # порядок сортировки bower CSS файлов
@@ -71,6 +71,9 @@ filter = (types)->
   plugins.filter types,
     restore: true
 
+log = (msg)->
+  plugins.util.log msg
+
 #
 Inject =
   orderedVendorJs: ->
@@ -91,7 +94,7 @@ Inject =
     .pipe plugins.order []
   # вставка css и js в html файлы папки сервера
   src: (src)->
-    console.log "html injecting..."
+    log "html injecting..."
     src.pipe plugins.print()
     filterInject = filter "**/*.inject.html"
     src.pipe filterInject
@@ -112,10 +115,10 @@ Inject =
 Html =
   files: ["#{DIST_PATH}/**/*.jade", "#{DIST_PATH}/**/*.html"]
   watch: ->
-    console.log 'watching html,jade...'
+    log 'watching html,jade...'
     @src plugins.watch @files
   compile: ->
-    console.log 'compile html,jade...'
+    log 'compile html,jade...'
     @src gulp.src @files
   src: (src)->
     filterJade = filter "**/*.jade"
@@ -136,10 +139,10 @@ Html =
 Css =
   files: ["#{DIST_PATH}/**/*.sass", "#{DIST_PATH}/**/*.scss", "#{DIST_PATH}/**/*.css"]
   watch: ->
-    console.log 'watching sass,scss,css...'
+    log 'watching sass,scss,css...'
     @src plugins.watch @files
   compile: ->
-    console.log 'compile sass,scss,css...'
+    log 'compile sass,scss,css...'
     @src gulp.src @files
   src: (src)->
     filterSass = filter ["**/*.sass","**/*.scss"]
@@ -152,20 +155,30 @@ Css =
         .pipe plugins.csso()
     src.pipe gulp.dest PUBLIC_PATH
 
-
-images = ->
-  images = for ext in IMAGES
-    "#{DIST_PATH}/**/*.#{ext}"
-  gulp.src images
-    .pipe gulp.dest PUBLIC_PATH
+Image =
+  files: ->
+    images = for ext in IMAGES
+      "#{DIST_PATH}/**/*.#{ext}"
+  watch: ->
+    log 'watching images...'
+    @src plugins.watch @files
+  compile: ->
+    log 'compile images...'
+    @src gulp.src @files()
+  src: (src)->
+    src.pipe plugins.imagemin
+        progressive: true
+        svgoPlugins: [{removeViewBox: false}]
+        use: [plugins.imageminPngquant()]
+      .pipe gulp.dest PUBLIC_PATH
 
 Js =
   files: ["#{DIST_PATH}/**/*.coffee", "#{DIST_PATH}/**/*.js"]
   watch: ->
-    console.log 'watching js,coffee...'
+    log 'watching js,coffee...'
     @src plugins.watch @files
   compile: ->
-    console.log 'compile js,coffee...'
+    log 'compile js,coffee...'
     @src gulp.src @files
   src: (src)->
     filterCoffee = filter "**/*.coffee"
@@ -231,7 +244,7 @@ build = ->
       bower(),
       Css.compile(),
       Js.compile(),
-      images()
+      Image.compile()
     ]).then ->
       Html.compile()
 
@@ -249,6 +262,7 @@ server = ->
   Html.watch()
   Css.watch()
   Js.watch()
+  Image.watch()
 
 # список тасков gulp
 tasks =
@@ -264,13 +278,13 @@ tasks =
   default:
     desc: "show tasks list"
     action: ->
-      console.log "----- available tasks -----"
+      log "----- available tasks -----"
       for task, opts of tasks
         num = 10 - task.length
         num = 0 if num < 0
         prefix = while num -= 1
           " "
-        console.log "#{prefix.join('')}#{task}: #{opts.desc}"
+        log "#{prefix.join('')}#{task}: #{opts.desc}"
 
 for task, opts of tasks
   gulp.task task, opts.action
