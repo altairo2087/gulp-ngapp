@@ -35,13 +35,14 @@
     "del": "~2.0.2",
     "browser-sync": "~2.9.12",
     "gulp-cli": "~0.3.0",
-    "gulp-autoprefixer": "~3.1.0",
     "gulp-css-url-adjuster": "~0.2.3",
     "gulp-filter": "~3.0.1",
     "q": "~1.4.1",
     "gulp-print": "~2.0.1",
     "gulp-util": "~3.0.7",
     "gulp-angular-htmlify": "~2.3.0",
-    "gulp-watch": "~4.3.5"
+    "gulp-watch": "~4.3.5",
+    "gulp-autoprefixer": "~3.1.0",
+    "es6-promise": "~3.0.2"
   }
 }

@@ -3,9 +3,11 @@
 gulp = require 'gulp'
 Q = require 'q'
 plugins = (require 'gulp-load-plugins')
-  pattern: ['gulp-*', 'gulp.*', 'del', 'main-bower-files']
+  pattern: ['gulp-*', 'gulp.*', 'del', 'main-bower-files','autoprefixer']
   replaceString: /\bgulp[\-.]/
 browserSync = require('browser-sync').create()
+
+require('es6-promise').polyfill();
 
 # --- НАСТРОЙКИ СЕРВЕРА
 # порт сервера
@@ -89,7 +91,8 @@ Inject =
     .pipe plugins.order []
   # вставка css и js в html файлы папки сервера
   src: (src)->
-    console.log 'html injecting...'
+    console.log "html injecting..."
+    src.pipe plugins.print()
     filterInject = filter "**/*.inject.html"
     src.pipe filterInject
     .pipe plugins.inject @orderedVendorCss(),
@@ -130,30 +133,39 @@ Html =
         indent_size: 2
     src.pipe gulp.dest PUBLIC_PATH
 
+Css =
+  files: ["#{DIST_PATH}/**/*.sass", "#{DIST_PATH}/**/*.scss", "#{DIST_PATH}/**/*.css"]
+  watch: ->
+    console.log 'watching sass,scss,css...'
+    @src plugins.watch @files
+  compile: ->
+    console.log 'compile sass,scss,css...'
+    @src gulp.src @files
+  src: (src)->
+    filterSass = filter ["**/*.sass","**/*.scss"]
+    src = src.pipe filterSass
+      .pipe plugins.sass()
+      .pipe filterSass.restore
+    src = src.pipe plugins.autoprefixer()
+    if ENV_CURRENT is ENV.PROD
+      src = src.pipe plugins.csso()
+    src.pipe gulp.dest PUBLIC_PATH
+
+
 images = ->
   images = for ext in IMAGES
     "#{DIST_PATH}/**/*.#{ext}"
   gulp.src images
-  .pipe gulp.dest PUBLIC_PATH
-
-sass = ->
-  gulp.src ["#{DIST_PATH}/**/*.sass", "#{DIST_PATH}/**/*.scss"]
-  .pipe plugins.sass()
-  .pipe gulp.dest PUBLIC_PATH
-
-css = ->
-  gulp.src "#{DIST_PATH}/**/*.css"
-  .pipe plugins.autoprefixer()
-  .pipe gulp.dest PUBLIC_PATH
+    .pipe gulp.dest PUBLIC_PATH
 
 coffee = ->
   gulp.src "#{DIST_PATH}/**/*.coffee"
-  .pipe plugins.coffee()
-  .pipe gulp.dest PUBLIC_PATH
+    .pipe plugins.coffee()
+    .pipe gulp.dest PUBLIC_PATH
 
 js = ->
   gulp.src "#{DIST_PATH}/**/*.js"
-  .pipe gulp.dest PUBLIC_PATH
+    .pipe gulp.dest PUBLIC_PATH
 
 # постройка bower файлов проекта в папку сервера
 bower = ->
@@ -206,8 +218,7 @@ build = ->
   clean().then ->
     Q.all([
       bower(),
-      sass()
-      css(),
+      Css.compile(),
       coffee(),
       js(),
       images()
@@ -226,6 +237,7 @@ server = ->
     browser: "google chrome"
     reloadOnRestart: true
   Html.watch()
+  Css.watch()
 
 # список тасков gulp
 tasks =
