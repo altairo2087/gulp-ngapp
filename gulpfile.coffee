@@ -65,6 +65,9 @@ if plugins.util.env.watch isnt undefined
 clean = ->
   plugins.del ["#{PUBLIC_PATH}/**","!#{PUBLIC_PATH}","!#{PUBLIC_PATH}/.gitkeep"]
 
+filter = (types)->
+  plugins.filter types,
+    restore: true
 
 orderedVendorJs = ->
   gulp.src "#{PUBLIC_PATH}/vendor/*.js",
@@ -86,12 +89,34 @@ orderedCustomCss = ->
     read: false
   .pipe plugins.order []
 
+# вставка css и js в html файлы папки сервера
+inject = (src)->
+  filterInject = filter "**/*.inject.html"
+  src.pipe filterInject
+  .pipe plugins.inject orderedVendorCss(),
+    name: 'bower'
+    relative: true
+  .pipe plugins.inject orderedCustomCss(),
+    relative: true
+  .pipe plugins.inject orderedVendorJs(),
+    name: 'bower'
+    relative: true
+  .pipe plugins.inject orderedCustomJs(),
+    relative: true
+  .pipe plugins.rename (path)->
+    path.basename = path.basename.replace '.inject', ''
+  .pipe filterInject.restore
+
 jade = ->
-  gulp.src "#{DIST_PATH}/**/*.jade"
+  src = gulp.src "#{DIST_PATH}/**/*.jade"
     .pipe plugins.jade()
     .pipe plugins.prettify
       indent_size: 2
-    .pipe gulp.dest PUBLIC_PATH
+    .pipe plugins.angularHtmlify()
+
+  src = inject(src)
+
+  src.pipe gulp.dest PUBLIC_PATH
 
 jadeWatch = ->
   gulp.src ["#{DIST_PATH}/**/*.jade","!#{DIST_PATH}/**/*.inject.jade"]
@@ -102,10 +127,14 @@ jadeWatch = ->
     .pipe gulp.dest PUBLIC_PATH
 
 html = ->
-  gulp.src "#{DIST_PATH}/**/*.html"
+  src = gulp.src "#{DIST_PATH}/**/*.html"
     .pipe plugins.prettify
       indent_size: 2
-    .pipe gulp.dest PUBLIC_PATH
+    .pipe plugins.angularHtmlify()
+
+  src = inject(src)
+
+  src.pipe gulp.dest PUBLIC_PATH
 
 images = ->
   images = for ext in IMAGES
@@ -123,10 +152,6 @@ css = ->
     .pipe plugins.autoprefixer()
     .pipe gulp.dest PUBLIC_PATH
 
-filter = (types)->
-  plugins.filter types,
-    restore: true
-
 coffee = ->
   gulp.src "#{DIST_PATH}/**/*.coffee"
     .pipe plugins.coffee()
@@ -138,36 +163,6 @@ js = ->
 
 watch = ->
 #jadeWatch()
-
-# вставка css и js в html файлы папки сервера
-inject = ->
-  q = Q.defer()
-  gulp.src "#{PUBLIC_PATH}/**/*.inject.html"
-  .pipe plugins.inject orderedVendorCss(),
-    name: 'bower'
-    relative: true
-  .pipe plugins.inject orderedCustomCss(),
-    relative: true
-  .pipe plugins.inject orderedVendorJs(),
-    name: 'bower'
-    relative: true
-  .pipe plugins.inject orderedCustomJs(),
-    relative: true
-  .pipe plugins.rename (path)->
-    path.basename = path.basename.replace '.inject', ''
-  .pipe gulp.dest PUBLIC_PATH
-  .on 'end', ->
-    plugins.del "#{PUBLIC_PATH}/**/*.inject.html"
-    .then ->
-      if ENV_CURRENT is ENV.PROD
-        gulp.src "#{PUBLIC_PATH}/**/*.html"
-          .pipe plugins.angularHtmlify()
-          .pipe plugins.htmlmin
-            collapseWhitespace: true
-            removeComments: true
-          .pipe gulp.dest PUBLIC_PATH
-      q.resolve()
-  q.promise
 
 # постройка bower файлов проекта в папку сервера
 bower = ->
@@ -219,14 +214,17 @@ bower = ->
 build = ->
   clean().then ->
     Q.all([
-      jade(),
-      html(),
-      images(),
-      sass(),
+      bower(),
+      sass()
       css(),
-      bower()
+      coffee(),
+      js(),
+      images()
     ]).then ->
-      inject()
+      jade()
+      html()
+
+
 
 # запуск сервера
 server = ->
