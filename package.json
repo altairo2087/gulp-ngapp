@@ -4,14 +4,14 @@
   "description": "",
   "main": "server.js",
   "scripts": {
-    "clean":"gulp clean",
-    "server":"gulp server",
-    "server:watch":"gulp server --watch true",
-    "server:nowatch":"gulp server --watch false",
-    "build":"gulp build",
-    "build:dev":"gulp build --env dev",
-    "build:prod":"gulp build --env prod",
-    "list":"gulp default"
+    "clean": "gulp clean",
+    "server": "gulp server",
+    "server:watch": "gulp server --watch true",
+    "server:nowatch": "gulp server --watch false",
+    "build": "gulp build",
+    "build:dev": "gulp build --env dev",
+    "build:prod": "gulp build --env prod",
+    "list": "gulp default"
   },
   "repository": {
     "type": "git",
@@ -50,7 +50,8 @@
     "gulp-watch": "~4.3.5",
     "gulp-autoprefixer": "~3.1.0",
     "es6-promise": "~3.0.2",
-    "gulp-imagemin": "~2.4.0"
+    "gulp-imagemin": "~2.4.0",
+    "imagemin-pngquant": "~4.2.0"
   },
   "dependencies": {
     "imagemin-pngquant": "~4.2.0"
