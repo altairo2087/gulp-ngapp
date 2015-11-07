@@ -74,7 +74,7 @@ filter = (types)->
 log = (msg)->
   plugins.util.log msg
 
-#
+# вставка css и js в html файлы папки сервера
 Inject =
   orderedVendorJs: ->
     gulp.src "#{PUBLIC_PATH}/vendor/*.js",
@@ -92,34 +92,29 @@ Inject =
     gulp.src ["#{PUBLIC_PATH}/**/*.css", "!#{PUBLIC_PATH}/vendor/**/*"],
       read: false
     .pipe plugins.order []
-  # вставка css и js в html файлы папки сервера
   src: (src)->
     log "html injecting..."
     transform = ()->
       args = arguments
       args[0] = args[0].replace '/public/',''
-      #filepath.replace '/public/',''
       plugins.inject.transform.apply plugins.inject.transform, args
     filterInject = filter "**/*.inject.html"
     src.pipe filterInject
     .pipe plugins.inject @orderedVendorCss(),
       name: 'bower'
       transform: transform
-      #relative: true
     .pipe plugins.inject @orderedCustomCss(),
       transform: transform
-      #relative: true
     .pipe plugins.inject @orderedVendorJs(),
       name: 'bower'
       transform: transform
-      #relative: true
     .pipe plugins.inject @orderedCustomJs(),
       transform: transform
-      #relative: true
     .pipe plugins.rename (path)->
       path.basename = path.basename.replace '.inject', ''
     .pipe filterInject.restore
 
+# обработка html и jade
 Html =
   files: ["#{DIST_PATH}/**/*.jade", "#{DIST_PATH}/**/*.html"]
   watch: ->
@@ -144,6 +139,7 @@ Html =
         indent_size: 2
     src.pipe gulp.dest PUBLIC_PATH
 
+# обработка css, sass и scss
 Css =
   files: ["#{DIST_PATH}/**/*.sass", "#{DIST_PATH}/**/*.scss", "#{DIST_PATH}/**/*.css"]
   watch: ->
@@ -163,6 +159,7 @@ Css =
         .pipe plugins.csso()
     src.pipe gulp.dest PUBLIC_PATH
 
+# обработка css, sass и scss
 Image =
   files: ->
     images = for ext in IMAGES
@@ -180,6 +177,7 @@ Image =
         use: [plugins.imageminPngquant()]
       .pipe gulp.dest PUBLIC_PATH
 
+# обработка js и coffeescript
 Js =
   files: ["#{DIST_PATH}/**/*.coffee", "#{DIST_PATH}/**/*.js"]
   watch: ->
