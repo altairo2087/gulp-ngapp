@@ -33,12 +33,10 @@
 
   ORDER_VENDOR_JS = ["*jquery*", "*bootstrap.*", "*bootstrap*", "!*angular*", "*angular.*", "*angular*"];
 
-  ENV = [
-    {
-      PROD: 'prod',
-      DEV: 'dev'
-    }
-  ];
+  ENV = {
+    PROD: 'prod',
+    DEV: 'dev'
+  };
 
   ENV_CURRENT = ENV.DEV;
 
@@ -180,7 +178,7 @@
     },
     watch: function() {
       log('watching images...');
-      return this.src(plugins.watch(this.files));
+      return this.src(plugins.watch(this.files()));
     },
     compile: function() {
       log('compile images...');

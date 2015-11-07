@@ -43,12 +43,11 @@ ORDER_VENDOR_JS = [
 ]
 
 # --- ОКРУЖЕНИЯ
-ENV = [
-# продакшн (полная минификация ресурсов)
+ENV =
+  # продакшн (полная минификация ресурсов)
   PROD: 'prod'
-# разработка
+  # разработка
   DEV: 'dev'
-]
 
 # текущее окружение
 ENV_CURRENT = ENV.DEV
@@ -166,7 +165,7 @@ Image =
       "#{DIST_PATH}/**/*.#{ext}"
   watch: ->
     log 'watching images...'
-    @src plugins.watch @files
+    @src plugins.watch @files()
   compile: ->
     log 'compile images...'
     @src gulp.src @files()
@@ -253,7 +252,6 @@ build = ->
       Image.compile()
     ]).then ->
       Html.compile()
-
 
 # запуск сервера
 server = ->
