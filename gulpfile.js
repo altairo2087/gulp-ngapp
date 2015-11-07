@@ -89,20 +89,25 @@
       }).pipe(plugins.order([]));
     },
     src: function(src) {
-      var filterInject;
+      var filterInject, transform;
       log("html injecting...");
-      src.pipe(plugins.print());
+      transform = function() {
+        var args;
+        args = arguments;
+        args[0] = args[0].replace('/public/', '');
+        return plugins.inject.transform.apply(plugins.inject.transform, args);
+      };
       filterInject = filter("**/*.inject.html");
       return src.pipe(filterInject).pipe(plugins.inject(this.orderedVendorCss(), {
         name: 'bower',
-        relative: true
+        transform: transform
       })).pipe(plugins.inject(this.orderedCustomCss(), {
-        relative: true
+        transform: transform
       })).pipe(plugins.inject(this.orderedVendorJs(), {
         name: 'bower',
-        relative: true
+        transform: transform
       })).pipe(plugins.inject(this.orderedCustomJs(), {
-        relative: true
+        transform: transform
       })).pipe(plugins.rename(function(path) {
         return path.basename = path.basename.replace('.inject', '');
       })).pipe(filterInject.restore);

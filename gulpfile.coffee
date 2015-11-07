@@ -95,19 +95,27 @@ Inject =
   # вставка css и js в html файлы папки сервера
   src: (src)->
     log "html injecting..."
-    src.pipe plugins.print()
+    transform = ()->
+      args = arguments
+      args[0] = args[0].replace '/public/',''
+      #filepath.replace '/public/',''
+      plugins.inject.transform.apply plugins.inject.transform, args
     filterInject = filter "**/*.inject.html"
     src.pipe filterInject
     .pipe plugins.inject @orderedVendorCss(),
       name: 'bower'
-      relative: true
+      transform: transform
+      #relative: true
     .pipe plugins.inject @orderedCustomCss(),
-      relative: true
+      transform: transform
+      #relative: true
     .pipe plugins.inject @orderedVendorJs(),
       name: 'bower'
-      relative: true
+      transform: transform
+      #relative: true
     .pipe plugins.inject @orderedCustomJs(),
-      relative: true
+      transform: transform
+      #relative: true
     .pipe plugins.rename (path)->
       path.basename = path.basename.replace '.inject', ''
     .pipe filterInject.restore
