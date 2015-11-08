@@ -143,11 +143,13 @@ Css =
   files: ["#{DIST_PATH}/**/*.sass", "#{DIST_PATH}/**/*.scss", "#{DIST_PATH}/**/*.css"]
   watch: ->
     log 'watching sass,scss,css...'
-    @src plugins.watch @files
+    @src plugins.watch @files, true
   compile: ->
     log 'compile sass,scss,css...'
     @src gulp.src @files
-  src: (src)->
+  src: (src, isWatch)->
+    if isWatch and ENV_CURRENT is ENV.PROD
+      src = gulp.src @files
     filterSass = filter ["**/*.sass","**/*.scss"]
     src = src.pipe filterSass
       .pipe plugins.sass()
@@ -181,11 +183,13 @@ Js =
   files: ["#{DIST_PATH}/**/*.coffee", "#{DIST_PATH}/**/*.js"]
   watch: ->
     log 'watching js,coffee...'
-    @src plugins.watch @files
+    @src plugins.watch @files, true
   compile: ->
     log 'compile js,coffee...'
     @src gulp.src @files
-  src: (src)->
+  src: (src, isWatch)->
+    if isWatch and ENV_CURRENT is ENV.PROD
+      src = gulp.src @files
     filterCoffee = filter "**/*.coffee"
     src = src.pipe filterCoffee
       .pipe plugins.coffee()

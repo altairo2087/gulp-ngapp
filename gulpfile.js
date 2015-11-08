@@ -145,14 +145,17 @@
     files: [DIST_PATH + "/**/*.sass", DIST_PATH + "/**/*.scss", DIST_PATH + "/**/*.css"],
     watch: function() {
       log('watching sass,scss,css...');
-      return this.src(plugins.watch(this.files));
+      return this.src(plugins.watch(this.files, true));
     },
     compile: function() {
       log('compile sass,scss,css...');
       return this.src(gulp.src(this.files));
     },
-    src: function(src) {
+    src: function(src, isWatch) {
       var filterSass;
+      if (isWatch && ENV_CURRENT === ENV.PROD) {
+        src = gulp.src(this.files);
+      }
       filterSass = filter(["**/*.sass", "**/*.scss"]);
       src = src.pipe(filterSass).pipe(plugins.sass()).pipe(filterSass.restore);
       src = src.pipe(plugins.autoprefixer());
@@ -201,14 +204,17 @@
     files: [DIST_PATH + "/**/*.coffee", DIST_PATH + "/**/*.js"],
     watch: function() {
       log('watching js,coffee...');
-      return this.src(plugins.watch(this.files));
+      return this.src(plugins.watch(this.files, true));
     },
     compile: function() {
       log('compile js,coffee...');
       return this.src(gulp.src(this.files));
     },
-    src: function(src) {
+    src: function(src, isWatch) {
       var filterCoffee;
+      if (isWatch && ENV_CURRENT === ENV.PROD) {
+        src = gulp.src(this.files);
+      }
       filterCoffee = filter("**/*.coffee");
       src = src.pipe(filterCoffee).pipe(plugins.coffee()).pipe(filterCoffee.restore);
       if (ENV_CURRENT === ENV.PROD) {
